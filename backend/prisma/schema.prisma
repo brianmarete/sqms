@@ -1,0 +1,65 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+enum TicketStatus {
+  WAITING
+  SERVING
+  COMPLETED
+  CANCELLED
+}
+
+enum StaffRole {
+  STAFF
+  ADMIN
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  tickets   Ticket[]
+  staff     Staff[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Staff {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         StaffRole @default(STAFF)
+  branchId     String
+  branch       Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([branchId])
+  @@index([role])
+}
+
+model Ticket {
+  id          String       @id @default(cuid())
+  ticketNo    String       // e.g., A-101
+  customerName String?
+  phone       String
+  status      TicketStatus @default(WAITING)
+  serviceType String
+  branchId    String
+  branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  calledAt    DateTime?
+  completedAt DateTime?
+
+  @@index([branchId])
+  @@index([status])
+  @@index([createdAt])
+}
