@@ -18,6 +18,17 @@ enum TicketStatus {
   CANCELLED
 }
 
+enum TicketChannel {
+  KIOSK
+  WEB
+  MOBILE
+}
+
+enum TicketCancelReason {
+  CANCELLED
+  NO_SHOW
+}
+
 enum StaffRole {
   STAFF
   ADMIN
@@ -26,10 +37,28 @@ enum StaffRole {
 model Branch {
   id        String   @id @default(cuid())
   name      String
+  services  Service[]
   tickets   Ticket[]
   staff     Staff[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Service {
+  id           String   @id @default(cuid())
+  branchId     String
+  branch       Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  name         String
+  counterLabel String?  // e.g., "Counter 3" / "Loans Desk"
+  isActive     Boolean  @default(true)
+  tickets      Ticket[]
+  staff        Staff[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([branchId, name])
+  @@index([branchId])
+  @@index([isActive])
 }
 
 model Staff {
@@ -39,10 +68,16 @@ model Staff {
   role         StaffRole @default(STAFF)
   branchId     String
   branch       Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  serviceId    String?
+  service      Service?  @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  ticketsCalled    Ticket[] @relation("TicketCalledBy")
+  ticketsCompleted Ticket[] @relation("TicketCompletedBy")
+  ticketsCancelled Ticket[] @relation("TicketCancelledBy")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
   @@index([branchId])
+  @@index([serviceId])
   @@index([role])
 }
 
@@ -52,14 +87,32 @@ model Ticket {
   customerName String?
   phone       String
   status      TicketStatus @default(WAITING)
+  channel     TicketChannel @default(WEB)
+  // serviceType is kept for backward compatibility (human-readable label)
   serviceType String
+  serviceId   String?
+  service     Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
   branchId    String
   branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
   createdAt   DateTime     @default(now())
   calledAt    DateTime?
   completedAt DateTime?
+  cancelledAt DateTime?
+  cancelReason TicketCancelReason?
+
+  calledByStaffId    String?
+  calledByStaff      Staff? @relation("TicketCalledBy", fields: [calledByStaffId], references: [id], onDelete: SetNull)
+  completedByStaffId String?
+  completedByStaff   Staff? @relation("TicketCompletedBy", fields: [completedByStaffId], references: [id], onDelete: SetNull)
+  cancelledByStaffId String?
+  cancelledByStaff   Staff? @relation("TicketCancelledBy", fields: [cancelledByStaffId], references: [id], onDelete: SetNull)
 
   @@index([branchId])
+  @@index([serviceId])
   @@index([status])
   @@index([createdAt])
+  @@index([channel])
+  @@index([calledByStaffId])
+  @@index([completedByStaffId])
+  @@index([cancelledByStaffId])
 }

@@ -24,13 +24,15 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     console.log(`Client disconnected: ${client.id}`);
   }
 
-  broadcastQueueUpdate(branchId: string) {
-    this.server.emit(`queue-update:${branchId}`, {
+  broadcastQueueUpdate(branchId: string, serviceId?: string | null) {
+    const suffix = serviceId ? `:${serviceId}` : '';
+    this.server.emit(`queue-update:${branchId}${suffix}`, {
       timestamp: new Date().toISOString(),
     });
   }
 
-  broadcastTicketUpdate(branchId: string, ticket: any) {
-    this.server.emit(`ticket-update:${branchId}`, ticket);
+  broadcastTicketUpdate(branchId: string, ticket: any, serviceId?: string | null) {
+    const suffix = serviceId ? `:${serviceId}` : '';
+    this.server.emit(`ticket-update:${branchId}${suffix}`, ticket);
   }
 }

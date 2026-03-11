@@ -17,29 +17,41 @@ export class QueueController {
   }
 
   @Get('active')
-  async getActiveQueue(@Query('branchId') branchId: string) {
-    return this.queueService.getActiveQueue(branchId);
+  async getActiveQueue(@Query('branchId') branchId: string, @Query('serviceId') serviceId?: string) {
+    return this.queueService.getActiveQueue(branchId, serviceId);
   }
 
   @Get('current-serving')
-  async getCurrentServing(@Query('branchId') branchId: string) {
-    return this.queueService.getCurrentServing(branchId);
+  async getCurrentServing(
+    @Query('branchId') branchId: string,
+    @Query('serviceId') serviceId?: string,
+  ) {
+    return this.queueService.getCurrentServing(branchId, serviceId);
   }
 
   @Patch('call-next')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(StaffRole.STAFF, StaffRole.ADMIN)
-  async callNext(@Query('branchId') branchId: string, @Req() req: Request) {
-    const user = req.user as { branchId: string };
-    return this.queueService.callNext(branchId, user.branchId);
+  async callNext(
+    @Query('branchId') branchId: string,
+    @Query('serviceId') serviceId: string | undefined,
+    @Req() req: Request,
+  ) {
+    const user = req.user as { id: string; branchId: string; serviceId?: string | null };
+    return this.queueService.callNext(
+      branchId,
+      user.branchId,
+      user.id,
+      serviceId ?? user.serviceId ?? undefined,
+    );
   }
 
   @Patch('complete/:ticketId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(StaffRole.STAFF, StaffRole.ADMIN)
   async completeTicket(@Param('ticketId') ticketId: string, @Req() req: Request) {
-    const user = req.user as { branchId: string };
-    return this.queueService.completeTicket(ticketId, user.branchId);
+    const user = req.user as { id: string; branchId: string };
+    return this.queueService.completeTicket(ticketId, user.branchId, user.id);
   }
 
   @Patch('cancel/:ticketId')
@@ -50,7 +62,7 @@ export class QueueController {
     @Query('reason') reason: 'no-show' | 'cancelled' = 'cancelled',
     @Req() req: Request,
   ) {
-    const user = req.user as { branchId: string };
-    return this.queueService.cancelTicket(ticketId, reason, user.branchId);
+    const user = req.user as { id: string; branchId: string };
+    return this.queueService.cancelTicket(ticketId, reason, user.branchId, user.id);
   }
 }

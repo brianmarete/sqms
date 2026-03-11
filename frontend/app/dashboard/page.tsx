@@ -4,11 +4,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { authApi, queueApi, type StaffUser, Ticket } from '@/lib/api';
+import { authApi, queueApi, servicesApi, type Service, type StaffUser, Ticket } from '@/lib/api';
 import { useSocket } from '@/hooks/use-socket';
 import { Loader2, Phone, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Default branch ID - in production, this would come from auth or config
 const DEFAULT_BRANCH_ID = 'default-branch';
@@ -17,6 +24,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<StaffUser | null>(null);
   const [branchId, setBranchId] = useState(DEFAULT_BRANCH_ID);
+  const [serviceId, setServiceId] = useState<string | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
@@ -25,8 +34,8 @@ export default function DashboardPage() {
   const fetchQueue = useCallback(async () => {
     try {
       const [active, serving] = await Promise.all([
-        queueApi.getActiveQueue(branchId),
-        queueApi.getCurrentServing(branchId),
+        queueApi.getActiveQueue(branchId, serviceId),
+        queueApi.getCurrentServing(branchId, serviceId),
       ]);
       setTickets(active);
       setCurrentServing(serving);
@@ -35,10 +44,10 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [branchId]);
+  }, [branchId, serviceId]);
 
   // Set up WebSocket connection
-  useSocket(branchId, fetchQueue);
+  useSocket(branchId, serviceId, fetchQueue);
 
   // Initial fetch
   useEffect(() => {
@@ -54,6 +63,7 @@ export default function DashboardPage() {
         if (cancelled) return;
         setUser(user);
         setBranchId(user.branchId || DEFAULT_BRANCH_ID);
+        setServiceId(user.serviceId ?? null);
       } catch (e) {
         // If this fails, middleware should already redirect to login; keep fallback behavior.
         console.error('Failed to load user session:', e);
@@ -63,6 +73,24 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!branchId) return;
+        const list = await servicesApi.listForBranch(branchId, true);
+        if (cancelled) return;
+        setServices(list);
+        if (!serviceId && list.length > 0) setServiceId(list[0].id);
+      } catch (e) {
+        console.error('Failed to load services:', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId, serviceId]);
 
   const handleLogout = async () => {
     try {
@@ -75,7 +103,7 @@ export default function DashboardPage() {
   const handleCallNext = async () => {
     setProcessing('call-next');
     try {
-      const ticket = await queueApi.callNext(DEFAULT_BRANCH_ID);
+      const ticket = await queueApi.callNext(branchId, serviceId);
       setCurrentServing(ticket);
       await fetchQueue();
     } catch (error: any) {
@@ -148,6 +176,25 @@ export default function DashboardPage() {
             <p className="text-muted-foreground">Manage your customer queue in real-time</p>
           </div>
           <div className="flex items-center gap-2">
+            <div className="min-w-[220px]">
+              <Select
+                value={serviceId ?? ''}
+                onValueChange={(v) => setServiceId(v)}
+                disabled={processing !== null || services.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select service counter" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                      {s.counterLabel ? ` — ${s.counterLabel}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {user?.role === 'ADMIN' && (
               <Button asChild variant="outline">
                 <Link href="/admin/analytics">Analytics</Link>
@@ -158,7 +205,7 @@ export default function DashboardPage() {
             </Button>
             <Button
               onClick={handleCallNext}
-              disabled={loading || processing !== null || waitingTickets.length === 0}
+              disabled={loading || processing !== null || waitingTickets.length === 0 || !serviceId}
               size="lg"
             >
               {processing === 'call-next' ? (

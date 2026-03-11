@@ -30,6 +30,7 @@ export class AuthService {
       email: staff.email,
       role: staff.role,
       branchId: staff.branchId,
+      serviceId: (staff as any).serviceId ?? null,
     };
 
     return this.jwt.signAsync(payload);

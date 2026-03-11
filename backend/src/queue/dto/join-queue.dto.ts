@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class JoinQueueDto {
   @IsString()
@@ -11,9 +11,14 @@ export class JoinQueueDto {
 
   @IsString()
   @IsNotEmpty()
-  serviceType: string;
+  serviceId: string;
 
   @IsString()
   @IsNotEmpty()
   branchId: string;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(['KIOSK', 'WEB', 'MOBILE'])
+  channel?: 'KIOSK' | 'WEB' | 'MOBILE';
 }

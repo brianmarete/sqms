@@ -7,6 +7,9 @@ import { RedisModule } from './redis/redis.module';
 import { SmsModule } from './sms/sms.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { AuthModule } from './auth/auth.module';
+import { BranchesModule } from './branches/branches.module';
+import { ServicesModule } from './services/services.module';
+import { StaffModule } from './staff/staff.module';
 
 @Module({
   imports: [
@@ -17,6 +20,9 @@ import { AuthModule } from './auth/auth.module';
     PrismaModule,
     RedisModule,
     AuthModule,
+    BranchesModule,
+    ServicesModule,
+    StaffModule,
     QueueModule,
     AnalyticsModule,
     SmsModule,

@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Header, Query, Req, UseGuards } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -25,5 +25,66 @@ export class AnalyticsController {
 
     const targetDate = date ? new Date(date) : undefined;
     return this.analyticsService.getDailyStats(branchId, targetDate);
+  }
+
+  @Get('summary')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(StaffRole.ADMIN)
+  async getSummary(
+    @Req() req: Request,
+    @Query('branchId') branchId?: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+    @Query('volumeGranularity') volumeGranularity?: 'hour' | 'day' | 'week',
+    @Query('slaThresholdMinutes') slaThresholdMinutes?: string,
+  ) {
+    const user = req.user as { role: StaffRole; branchId: string };
+    if (user.role !== StaffRole.ADMIN) {
+      throw new ForbiddenException('Only ADMIN can access analytics summary');
+    }
+
+    return this.analyticsService.getSummary({
+      branchId,
+      start,
+      end,
+      volumeGranularity,
+      slaThresholdMinutes: slaThresholdMinutes ? Number(slaThresholdMinutes) : undefined,
+    });
+  }
+
+  @Get('export')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(StaffRole.ADMIN)
+  async exportReport(
+    @Req() req: Request,
+    @Query('report')
+    report:
+      | 'queue-volume'
+      | 'wait-times'
+      | 'service-durations'
+      | 'sla'
+      | 'abandonment'
+      | 'throughput'
+      | 'staff-performance',
+    @Query('branchId') branchId?: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+    @Query('volumeGranularity') volumeGranularity?: 'hour' | 'day' | 'week',
+    @Query('slaThresholdMinutes') slaThresholdMinutes?: string,
+  ) {
+    const user = req.user as { role: StaffRole };
+    if (user.role !== StaffRole.ADMIN) {
+      throw new ForbiddenException('Only ADMIN can export reports');
+    }
+
+    return this.analyticsService.exportReportCsv({
+      report,
+      branchId,
+      start,
+      end,
+      volumeGranularity,
+      slaThresholdMinutes: slaThresholdMinutes ? Number(slaThresholdMinutes) : undefined,
+    });
   }
 }

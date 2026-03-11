@@ -8,6 +8,7 @@ const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000'
 
 export function useSocket(
   branchId: string | null,
+  serviceId?: string | null,
   onQueueUpdate?: () => void,
   onTicketUpdate?: (ticket: Ticket | null) => void,
 ) {
@@ -33,7 +34,8 @@ export function useSocket(
 
     // Listen for queue updates
     if (onQueueUpdate) {
-      socket.on(`queue-update:${branchId}`, () => {
+      const channel = serviceId ? `queue-update:${branchId}:${serviceId}` : `queue-update:${branchId}`;
+      socket.on(channel, () => {
         console.log('Queue update received');
         onQueueUpdate();
       });
@@ -41,7 +43,8 @@ export function useSocket(
 
     // Listen for ticket updates (e.g. "now serving")
     if (onTicketUpdate) {
-      socket.on(`ticket-update:${branchId}`, (ticket: Ticket | null) => {
+      const channel = serviceId ? `ticket-update:${branchId}:${serviceId}` : `ticket-update:${branchId}`;
+      socket.on(channel, (ticket: Ticket | null) => {
         console.log('Ticket update received');
         onTicketUpdate(ticket);
       });
@@ -49,12 +52,12 @@ export function useSocket(
 
     return () => {
       if (socket) {
-        socket.off(`queue-update:${branchId}`);
-        socket.off(`ticket-update:${branchId}`);
+        socket.off(serviceId ? `queue-update:${branchId}:${serviceId}` : `queue-update:${branchId}`);
+        socket.off(serviceId ? `ticket-update:${branchId}:${serviceId}` : `ticket-update:${branchId}`);
         socket.disconnect();
       }
     };
-  }, [branchId, onQueueUpdate, onTicketUpdate]);
+  }, [branchId, serviceId, onQueueUpdate, onTicketUpdate]);
 
   return socketRef.current;
 }

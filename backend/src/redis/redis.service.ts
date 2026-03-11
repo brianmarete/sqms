@@ -55,36 +55,44 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   // Queue operations
-  async addToQueue(branchId: string, ticketId: string): Promise<void> {
-    await this.client.rpush(`queue:${branchId}`, ticketId);
+  private queueKey(branchId: string, serviceId?: string | null) {
+    return serviceId ? `queue:${branchId}:${serviceId}` : `queue:${branchId}`;
   }
 
-  async getNextFromQueue(branchId: string): Promise<string | null> {
-    return await this.client.lpop(`queue:${branchId}`);
+  private currentServingKey(branchId: string, serviceId?: string | null) {
+    return serviceId ? `current-serving:${branchId}:${serviceId}` : `current-serving:${branchId}`;
+  }
+
+  async addToQueue(branchId: string, ticketId: string, serviceId?: string | null): Promise<void> {
+    await this.client.rpush(this.queueKey(branchId, serviceId), ticketId);
+  }
+
+  async getNextFromQueue(branchId: string, serviceId?: string | null): Promise<string | null> {
+    return await this.client.lpop(this.queueKey(branchId, serviceId));
   }
 
   // Currently serving operations
-  async setCurrentServing(branchId: string, ticketId: string): Promise<void> {
-    await this.client.set(`current-serving:${branchId}`, ticketId);
+  async setCurrentServing(branchId: string, ticketId: string, serviceId?: string | null): Promise<void> {
+    await this.client.set(this.currentServingKey(branchId, serviceId), ticketId);
   }
 
-  async getCurrentServing(branchId: string): Promise<string | null> {
-    return await this.client.get(`current-serving:${branchId}`);
+  async getCurrentServing(branchId: string, serviceId?: string | null): Promise<string | null> {
+    return await this.client.get(this.currentServingKey(branchId, serviceId));
   }
 
-  async clearCurrentServing(branchId: string): Promise<void> {
-    await this.client.del(`current-serving:${branchId}`);
+  async clearCurrentServing(branchId: string, serviceId?: string | null): Promise<void> {
+    await this.client.del(this.currentServingKey(branchId, serviceId));
   }
 
-  async getQueueLength(branchId: string): Promise<number> {
-    return await this.client.llen(`queue:${branchId}`);
+  async getQueueLength(branchId: string, serviceId?: string | null): Promise<number> {
+    return await this.client.llen(this.queueKey(branchId, serviceId));
   }
 
-  async getAllFromQueue(branchId: string): Promise<string[]> {
-    return await this.client.lrange(`queue:${branchId}`, 0, -1);
+  async getAllFromQueue(branchId: string, serviceId?: string | null): Promise<string[]> {
+    return await this.client.lrange(this.queueKey(branchId, serviceId), 0, -1);
   }
 
-  async removeFromQueue(branchId: string, ticketId: string): Promise<void> {
-    await this.client.lrem(`queue:${branchId}`, 1, ticketId);
+  async removeFromQueue(branchId: string, ticketId: string, serviceId?: string | null): Promise<void> {
+    await this.client.lrem(this.queueKey(branchId, serviceId), 1, ticketId);
   }
 }

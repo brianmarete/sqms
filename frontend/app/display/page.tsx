@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 // Default branch ID - in production, this would come from URL params or config
 const DEFAULT_BRANCH_ID = 'default-branch';
+const DEFAULT_SERVICE_ID: string | null = null;
 
 export default function DisplayPage() {
   const [currentServing, setCurrentServing] = useState<Ticket | null>(null);
@@ -15,7 +16,7 @@ export default function DisplayPage() {
 
   const fetchCurrentServing = useCallback(async () => {
     try {
-      const serving = await queueApi.getCurrentServing(DEFAULT_BRANCH_ID);
+      const serving = await queueApi.getCurrentServing(DEFAULT_BRANCH_ID, DEFAULT_SERVICE_ID);
       setCurrentServing(serving);
       setLastUpdatedAt(new Date());
     } catch (error) {
@@ -32,7 +33,7 @@ export default function DisplayPage() {
   }, []);
 
   // Live updates: when staff call/clear a ticket, update immediately
-  useSocket(DEFAULT_BRANCH_ID, undefined, handleTicketUpdate);
+  useSocket(DEFAULT_BRANCH_ID, DEFAULT_SERVICE_ID, undefined, handleTicketUpdate);
 
   useEffect(() => {
     fetchCurrentServing();
@@ -63,6 +64,11 @@ export default function DisplayPage() {
                   <div className="px-4 py-2 rounded-full bg-white/10 border border-white/10">
                     Service: <span className="font-semibold">{currentServing.serviceType}</span>
                   </div>
+                  {currentServing.service?.counterLabel && (
+                    <div className="px-4 py-2 rounded-full bg-white/10 border border-white/10">
+                      Counter: <span className="font-semibold">{currentServing.service.counterLabel}</span>
+                    </div>
+                  )}
                   {currentServing.branch?.name && (
                     <div className="px-4 py-2 rounded-full bg-white/10 border border-white/10">
                       Branch: <span className="font-semibold">{currentServing.branch.name}</span>

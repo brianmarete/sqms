@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { queueApi, JoinQueueResponse } from '@/lib/api';
+import { queueApi, servicesApi, type Service, JoinQueueResponse } from '@/lib/api';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 
 // Default branch ID - in production, this would come from URL params or config
@@ -21,10 +21,24 @@ const DEFAULT_BRANCH_ID = 'default-branch';
 export default function KioskPage() {
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
-  const [serviceType, setServiceType] = useState('');
+  const [serviceId, setServiceId] = useState('');
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
   const [ticket, setTicket] = useState<JoinQueueResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const loadServices = async () => {
+    try {
+      const list = await servicesApi.listForBranch(DEFAULT_BRANCH_ID, true);
+      setServices(list);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Failed to load services.');
+    }
+  };
+
+  useEffect(() => {
+    void loadServices();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,8 +49,9 @@ export default function KioskPage() {
       const result = await queueApi.joinQueue({
         customerName,
         phone,
-        serviceType,
+        serviceId,
         branchId: DEFAULT_BRANCH_ID,
+        channel: 'KIOSK',
       });
       setTicket(result);
     } catch (err: any) {
@@ -50,7 +65,7 @@ export default function KioskPage() {
     setTicket(null);
     setCustomerName('');
     setPhone('');
-    setServiceType('');
+    setServiceId('');
     setError(null);
   };
 
@@ -131,16 +146,16 @@ export default function KioskPage() {
 
             <div className="space-y-2">
               <Label htmlFor="service">Service Type</Label>
-              <Select value={serviceType} onValueChange={setServiceType} disabled={loading}>
+              <Select value={serviceId} onValueChange={setServiceId} disabled={loading}>
                 <SelectTrigger id="service">
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Support">Support</SelectItem>
-                  <SelectItem value="Account Opening">Account Opening</SelectItem>
-                  <SelectItem value="Cash Deposit">Cash Deposit</SelectItem>
-                  <SelectItem value="Loan Inquiry">Loan Inquiry</SelectItem>
-                  <SelectItem value="Card Services">Card Services</SelectItem>
+                  {services.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -151,7 +166,7 @@ export default function KioskPage() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading || !serviceType}>
+            <Button type="submit" className="w-full" disabled={loading || !serviceId}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
