@@ -161,6 +161,9 @@ export class QueueService {
     await this.redis.setCurrentServing(branchId, ticket.id, serviceId);
     await this.redis.setCurrentServing(branchId, ticket.id);
 
+    // Notify customer that they are being served now.
+    await this.smsService.sendCustomerCalled(ticket.phone, ticket.ticketNo, ticket.service.name);
+
     // Emit WebSocket event (service-specific + branch-wide fallback)
     this.websocketGateway.broadcastQueueUpdate(branchId, serviceId);
     this.websocketGateway.broadcastTicketUpdate(branchId, ticket, serviceId);

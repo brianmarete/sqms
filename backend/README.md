@@ -9,7 +9,7 @@ Smart Queue Management System - NestJS Backend
 - **Prisma** - ORM
 - **Redis** - Queue management
 - **Socket.io** - WebSocket for real-time updates
-- **Twilio** - SMS notifications
+- **Africa's Talking** - SMS notifications
 
 ## Setup
 
@@ -46,9 +46,9 @@ npm run prisma:seed
 redis-server
 ```
 
-6. (Optional) Install Twilio for SMS functionality:
+6. (Optional) Install Africa's Talking for SMS functionality:
 ```bash
-npm install twilio
+npm install africastalking
 ```
 
 7. Start the development server:
@@ -56,7 +56,7 @@ npm install twilio
 npm run start:dev
 ```
 
-**Note:** SMS functionality will work in mock mode (logs to console) if Twilio is not installed or configured.
+**Note:** SMS functionality will work in mock mode (logs to console) if Africa's Talking is not installed or configured.
 
 ## Environment Variables
 
@@ -64,9 +64,9 @@ npm run start:dev
 - `REDIS_HOST` - Redis host (default: localhost)
 - `REDIS_PORT` - Redis port (default: 6379)
 - `REDIS_PASSWORD` - Redis password (optional)
-- `TWILIO_ACCOUNT_SID` - Twilio account SID
-- `TWILIO_AUTH_TOKEN` - Twilio auth token
-- `TWILIO_PHONE_NUMBER` - Twilio phone number
+- `AFRICASTALKING_USERNAME` - Africa's Talking application username
+- `AFRICASTALKING_API_KEY` - Africa's Talking API key
+- `AFRICASTALKING_SENDER_ID` - Sender ID or short code (optional)
 - `PORT` - Server port (default: 3000)
 - `FRONTEND_URL` - Frontend URL for CORS (default: http://localhost:3001)
 
